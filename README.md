@@ -190,3 +190,23 @@ any time — or tap **Remove Pin** to go back to using the address.
   map: opening a route, searching an intersection, or showing the pin
   map in the 📍 panel. Entering, reordering, and saving stops all work
   offline once the app is installed.
+
+---
+
+## If the app looks out of date
+
+Bus Dravin remembers a copy of itself on your phone so it opens
+instantly, even offline. That copy always double-checks for a newer
+version first whenever you're online, so a normal reopen should keep
+it current on its own.
+
+If it ever does look stuck on an older version — a button or feature
+you know was added is missing — this fixes it:
+
+1. Fully close the app (swipe it away from your recent-apps list).
+2. Reopen it. This alone fixes it most of the time.
+3. Still stuck? On iPhone: **Settings → Safari → Advanced → Website
+   Data**, find `github.io`, and delete it. This wipes Bus Dravin's
+   saved routes and default city on this device, so it's worth noting
+   those down first if you'd rather not retype them. Then reopen the
+   app fresh.
