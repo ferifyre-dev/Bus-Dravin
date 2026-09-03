@@ -129,6 +129,45 @@ for any stop that doesn't look right.
 
 ---
 
+## Getting the exact side of the street
+
+Even with the fix above, Google Maps drops the pin at the *center* of an
+intersection — not necessarily the correct curb. On a divided road, a
+4-way stop, or a wide arterial road, that can mean the wrong side of the
+street or the wrong corner entirely.
+
+To fix a specific stop, tap the **📍** button next to it in Step 3. You
+get three ways to pin it exactly:
+
+**1. Use My Current Location** — if you're standing at the stop right
+now, this is the most accurate option. One tap, done.
+
+**2. Search, then pick the corner** — search the intersection (e.g.
+`Cavendish & Westminster, Montreal, QC`), then tap one of 8 numbered
+compass positions around it:
+
+```
+   8(NW)   1(N)   2(NE)
+   7(W)     📍     3(E)
+   6(SW)   5(S)   4(SE)
+```
+
+Pick a distance (10m for a narrow street, 20m typical, 35m for a wide
+road) and tap the corner where the stop actually is. This is an
+estimate — it offsets from the intersection's center in that compass
+direction, so it works best on a fairly standard 4-way crossing. Check
+where the pin lands before you rely on it.
+
+**3. Type coordinates you already have** — if you've already found the
+exact spot another way (e.g. long-pressed it in the Google Maps app and
+copied the coordinates), paste them in directly.
+
+Whichever method you use, that stop switches from its address text to
+an exact GPS point, which Google Maps will always treat as-is — no
+guessing.
+
+---
+
 ## Notes
 
 - Full street addresses also work, and don't need the default city —

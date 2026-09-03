@@ -307,6 +307,74 @@ code {
   font-style: italic;
 }
 
+.corner-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.9rem;
+  border-top: 2px dashed var(--yellow-dark);
+}
+
+.corner-panel h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+}
+
+.corner-option {
+  margin: 0.9rem 0;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.corner-option:last-of-type {
+  border-bottom: none;
+}
+
+.compass-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 0.4rem;
+  max-width: 260px;
+  margin: 0.75rem auto;
+}
+
+.compass-btn {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 2px solid var(--yellow-dark);
+  background: #fff8e6;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.1;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.compass-btn span {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #666;
+  letter-spacing: 0.03em;
+}
+
+.compass-btn:hover {
+  background: var(--yellow);
+}
+
+.compass-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.compass-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
 .status-message {
   margin: 0.75rem 0 0;
   font-size: 0.92rem;

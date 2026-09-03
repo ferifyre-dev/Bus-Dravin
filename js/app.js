@@ -10,6 +10,8 @@
   var MAX_STOPS_PER_LINK = 24;
 
   var stops = [];
+  var cornerEditIndex = -1;
+  var lastGeocodeResult = null;
 
   var els = {
     defaultCityInput: document.getElementById("default-city-input"),
@@ -27,7 +29,22 @@
     deleteRouteBtn: document.getElementById("delete-route-btn"),
     openMapsBtn: document.getElementById("open-maps-btn"),
     statusMessage: document.getElementById("status-message"),
+
+    cornerPanel: document.getElementById("corner-picker-panel"),
+    cornerPanelStopLabel: document.getElementById("corner-panel-stop-label"),
+    cornerStatus: document.getElementById("corner-status"),
+    useMyLocationBtn: document.getElementById("use-my-location-btn"),
+    cornerSearchInput: document.getElementById("corner-search-input"),
+    cornerSearchBtn: document.getElementById("corner-search-btn"),
+    compassWrap: document.getElementById("compass-wrap"),
+    cornerFoundName: document.getElementById("corner-found-name"),
+    cornerDistanceSelect: document.getElementById("corner-distance-select"),
+    cornerManualInput: document.getElementById("corner-manual-input"),
+    cornerManualBtn: document.getElementById("corner-manual-btn"),
+    cornerCancelBtn: document.getElementById("corner-cancel-btn"),
   };
+
+  var compassButtons = document.querySelectorAll(".compass-btn");
 
   // ---------- storage helpers ----------
 
@@ -104,6 +121,128 @@
     return formatted;
   }
 
+  // ---------- corner picker (side-of-street precision) ----------
+  // The address-and-directions flow above gets you to the right intersection,
+  // but Google Maps drops the pin at the crossing's center, not on the actual
+  // curb — wrong side of a divided road, wrong corner of a 4-way stop, etc.
+  // This lets a specific stop be swapped for a precise GPS point instead.
+
+  function setCornerStatus(message, type) {
+    els.cornerStatus.textContent = message;
+    els.cornerStatus.className = "help-text" + (type ? " " + type : "");
+  }
+
+  function openCornerPicker(index) {
+    cornerEditIndex = index;
+    lastGeocodeResult = null;
+    els.cornerPanelStopLabel.textContent = stops[index];
+    els.cornerSearchInput.value = "";
+    els.cornerManualInput.value = "";
+    els.compassWrap.hidden = true;
+    setCornerStatus("", null);
+    els.cornerPanel.hidden = false;
+    els.cornerPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function closeCornerPicker() {
+    cornerEditIndex = -1;
+    lastGeocodeResult = null;
+    els.cornerPanel.hidden = true;
+  }
+
+  function applyCornerResult(lat, lon) {
+    if (cornerEditIndex < 0 || cornerEditIndex >= stops.length) return;
+    var stopNumber = cornerEditIndex + 1;
+    stops[cornerEditIndex] = lat.toFixed(6) + "," + lon.toFixed(6);
+    closeCornerPicker();
+    renderStops();
+    setStatus("Stop " + stopNumber + " updated to the exact spot you picked.", "success");
+  }
+
+  function useMyLocation() {
+    if (!("geolocation" in navigator)) {
+      setCornerStatus("This browser can't look up your location. Try search or manual coordinates instead.", "error");
+      return;
+    }
+    setCornerStatus("Getting your location…", null);
+    els.useMyLocationBtn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        els.useMyLocationBtn.disabled = false;
+        applyCornerResult(pos.coords.latitude, pos.coords.longitude);
+      },
+      function (err) {
+        els.useMyLocationBtn.disabled = false;
+        setCornerStatus("Couldn't get your location (" + err.message + "). Try search or manual coordinates instead.", "error");
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }
+
+  function geocodeQuery(query) {
+    var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" + encodeURIComponent(query);
+    return fetch(url, { headers: { Accept: "application/json" } })
+      .then(function (res) {
+        if (!res.ok) throw new Error("Lookup failed. Try again in a moment.");
+        return res.json();
+      })
+      .then(function (results) {
+        if (!results || results.length === 0) {
+          throw new Error("No location found for that search. Try adding the city, or use manual coordinates below.");
+        }
+        return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon), name: results[0].display_name };
+      });
+  }
+
+  function searchCornerIntersection() {
+    var query = els.cornerSearchInput.value.trim();
+    if (!query) {
+      setCornerStatus("Type an intersection or address to search.", "error");
+      return;
+    }
+    els.compassWrap.hidden = true;
+    lastGeocodeResult = null;
+    setCornerStatus("Looking up…", null);
+    els.cornerSearchBtn.disabled = true;
+    geocodeQuery(query)
+      .then(function (result) {
+        lastGeocodeResult = result;
+        els.cornerFoundName.textContent = result.name;
+        els.compassWrap.hidden = false;
+        setCornerStatus("", null);
+      })
+      .catch(function (err) {
+        setCornerStatus(err.message || "Couldn't reach the lookup service. Try manual coordinates below.", "error");
+      })
+      .finally(function () {
+        els.cornerSearchBtn.disabled = false;
+      });
+  }
+
+  // Offsets a lat/lon by a compass bearing and distance, using a flat-earth
+  // approximation — accurate enough at the 10-35m scale of a single corner.
+  function offsetCoordinate(lat, lon, bearingDeg, distanceMeters) {
+    var EARTH_RADIUS_M = 6371000;
+    var bearingRad = (bearingDeg * Math.PI) / 180;
+    var latRad = (lat * Math.PI) / 180;
+    var dLat = (distanceMeters * Math.cos(bearingRad)) / EARTH_RADIUS_M;
+    var dLon = (distanceMeters * Math.sin(bearingRad)) / (EARTH_RADIUS_M * Math.cos(latRad));
+    return {
+      lat: lat + (dLat * 180) / Math.PI,
+      lon: lon + (dLon * 180) / Math.PI,
+    };
+  }
+
+  function useManualCoordinates() {
+    var text = els.cornerManualInput.value.trim();
+    if (!looksLikeCoordinates(text)) {
+      setCornerStatus("Enter coordinates like 45.50231, -73.65872.", "error");
+      return;
+    }
+    var parts = text.split(",");
+    applyCornerResult(parseFloat(parts[0]), parseFloat(parts[1]));
+  }
+
   // ---------- stop list rendering ----------
 
   function renderStops() {
@@ -157,6 +296,10 @@
       });
       downBtn.disabled = index === stops.length - 1;
 
+      var pinBtn = makeIconButton("📍", "Pin exact location for stop " + (index + 1), function () {
+        openCornerPicker(index);
+      });
+
       var removeBtn = makeIconButton("✕", "Remove stop " + (index + 1), function () {
         removeStop(index);
       });
@@ -164,6 +307,7 @@
 
       controls.appendChild(upBtn);
       controls.appendChild(downBtn);
+      controls.appendChild(pinBtn);
       controls.appendChild(removeBtn);
 
       li.appendChild(badge);
@@ -216,6 +360,7 @@
   }
 
   function removeStop(index) {
+    if (cornerEditIndex >= 0) closeCornerPicker();
     stops.splice(index, 1);
     renderStops();
   }
@@ -223,6 +368,7 @@
   function moveStop(index, direction) {
     var newIndex = index + direction;
     if (newIndex < 0 || newIndex >= stops.length) return;
+    if (cornerEditIndex >= 0) closeCornerPicker();
     var tmp = stops[index];
     stops[index] = stops[newIndex];
     stops[newIndex] = tmp;
@@ -233,6 +379,7 @@
     if (stops.length === 0) return;
     var ok = window.confirm("Remove all " + stops.length + " stops from this list? This does not delete any saved routes.");
     if (!ok) return;
+    if (cornerEditIndex >= 0) closeCornerPicker();
     stops = [];
     renderStops();
     setStatus("Stop list cleared.", "success");
@@ -299,6 +446,7 @@
       var ok = window.confirm("Replace your current stop list with \"" + name + "\"?");
       if (!ok) return;
     }
+    if (cornerEditIndex >= 0) closeCornerPicker();
     stops = routes[name].slice();
     els.routeNameInput.value = name;
     renderStops();
@@ -432,6 +580,26 @@
   });
 
   els.clearAllBtn.addEventListener("click", clearAllStops);
+
+  els.useMyLocationBtn.addEventListener("click", useMyLocation);
+  els.cornerSearchBtn.addEventListener("click", searchCornerIntersection);
+  els.cornerSearchInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchCornerIntersection();
+    }
+  });
+  els.cornerManualBtn.addEventListener("click", useManualCoordinates);
+  els.cornerCancelBtn.addEventListener("click", closeCornerPicker);
+  compassButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (!lastGeocodeResult) return;
+      var bearing = parseFloat(btn.getAttribute("data-bearing"));
+      var distance = parseFloat(els.cornerDistanceSelect.value);
+      var offset = offsetCoordinate(lastGeocodeResult.lat, lastGeocodeResult.lon, bearing, distance);
+      applyCornerResult(offset.lat, offset.lon);
+    });
+  });
   els.saveRouteBtn.addEventListener("click", saveCurrentRoute);
   els.loadRouteBtn.addEventListener("click", loadSelectedRoute);
   els.deleteRouteBtn.addEventListener("click", deleteSelectedRoute);

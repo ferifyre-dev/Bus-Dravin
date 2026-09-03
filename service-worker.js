@@ -1,7 +1,7 @@
 // Minimal offline cache so Bus Dravin opens instantly once installed.
 // It only caches the app shell — opening a route always needs a live
 // internet connection to reach Google Maps.
-var CACHE_NAME = "bus-dravin-v2";
+var CACHE_NAME = "bus-dravin-v3";
 var APP_SHELL = [
   "./",
   "./index.html",
