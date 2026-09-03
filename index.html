@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Bus Dravin</title>
+  <meta name="description" content="Turn a list of bus stops into a turn-by-turn route in Google Maps." />
+  <meta name="theme-color" content="#F5B811" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <img src="icons/icon-192.png" alt="" class="app-logo" />
+    <div>
+      <h1>Bus Dravin</h1>
+      <p class="subtitle">Stop list &rarr; turn-by-turn route</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- Step 1: Saved routes -->
+    <section class="card" aria-labelledby="routes-heading">
+      <h2 id="routes-heading">1. Saved Routes</h2>
+      <div class="row">
+        <label class="visually-hidden" for="route-select">Choose a saved route</label>
+        <select id="route-select">
+          <option value="">-- No saved routes yet --</option>
+        </select>
+        <button id="load-route-btn" type="button" class="btn btn-secondary">Load</button>
+        <button id="delete-route-btn" type="button" class="btn btn-danger">Delete</button>
+      </div>
+    </section>
+
+    <!-- Step 2: Enter stops -->
+    <section class="card" aria-labelledby="add-heading">
+      <h2 id="add-heading">2. Add Your Stops</h2>
+      <p class="help-text">Paste your whole stop list at once (one address per line), or add stops one at a time below. The order you enter is the order the route will drive.</p>
+
+      <label for="paste-area">Paste stop list</label>
+      <textarea id="paste-area" rows="4" placeholder="123 Maple St, Montreal, QC&#10;456 Oak Ave, Montreal, QC&#10;789 Pine Rd, Montreal, QC"></textarea>
+      <button id="add-pasted-btn" type="button" class="btn btn-secondary">Add Pasted Stops</button>
+
+      <div class="row single-stop-row">
+        <label class="visually-hidden" for="single-stop-input">Add one stop</label>
+        <input id="single-stop-input" type="text" placeholder="Add a single stop, e.g. 123 Maple St, Montreal, QC" />
+        <button id="add-single-btn" type="button" class="btn btn-secondary">Add</button>
+      </div>
+    </section>
+
+    <!-- Step 3: Order the stops -->
+    <section class="card" aria-labelledby="order-heading">
+      <h2 id="order-heading">3. Check the Order</h2>
+      <p class="help-text">First stop is where the route starts. Last stop is where it ends. Use the arrows to reorder, or the X to remove a stop.</p>
+      <ol id="stop-list" class="stop-list"></ol>
+      <p id="empty-message" class="empty-message">No stops yet. Add some above.</p>
+      <button id="clear-all-btn" type="button" class="btn btn-danger btn-small">Clear All Stops</button>
+    </section>
+
+    <!-- Step 4: Save this route -->
+    <section class="card" aria-labelledby="save-heading">
+      <h2 id="save-heading">4. Save This Route (optional)</h2>
+      <p class="help-text">Give it a name like "AM Route" or "PM Route" so you can load it again tomorrow without retyping.</p>
+      <div class="row">
+        <label class="visually-hidden" for="route-name-input">Route name</label>
+        <input id="route-name-input" type="text" placeholder="e.g. AM Route" />
+        <button id="save-route-btn" type="button" class="btn btn-secondary">Save Route</button>
+      </div>
+    </section>
+
+    <!-- Step 5: Open in Maps -->
+    <section class="card" aria-labelledby="open-heading">
+      <h2 id="open-heading">5. Open the Route</h2>
+      <button id="open-maps-btn" type="button" class="btn btn-primary btn-large">
+        Open Route in Google Maps
+      </button>
+      <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Everything you type stays on this device only &mdash; nothing is sent anywhere except when you choose to open Google Maps.</p>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
