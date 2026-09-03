@@ -137,30 +137,35 @@ intersection — not necessarily the correct curb. On a divided road, a
 street or the wrong corner entirely.
 
 To fix a specific stop, tap the **📍** button next to it in Step 3. This
-opens a real, draggable map — no compass directions to figure out, just
-drag the pin to the actual corner you mean and confirm:
+opens a real map with a pin fixed in the middle — no compass directions
+to figure out, and no dragging a marker around either:
 
 1. When the panel opens, it automatically searches for that stop and
    shows it on the map — you don't need to type or search anything
    again unless the result looks wrong.
-2. **Drag the pin** to the exact spot: the correct curb, the correct
-   side of a divided road, the correct corner of a 4-way stop.
+2. **The pin stays put in the center. Drag the map itself** underneath
+   it, like panning any map, until the pin lands on the exact spot:
+   the correct curb, the correct side of a divided road, the correct
+   corner of a 4-way stop.
 3. Tap **Use This Pin**.
 
 You also get two other ways to get a starting point on the map, both
 useful in different situations:
 
 - **Use My Current Location** — if you're standing at the stop right
-  now, this drops the pin at your phone's GPS position; drag to
+  now, this centers the map on your phone's GPS position; pan to
   fine-tune if it's slightly off, then confirm.
 - **Type coordinates you already have** — if you've already found the
   exact spot another way, this shows it on the map so you can double
   check (and still adjust) before confirming.
 
-Whichever method you start with, that stop switches from its address
-text to an exact GPS point, which Google Maps will always treat as-is
-— no guessing. Reopening the 📍 panel on an already-pinned stop shows
-its current pin on the map again, so you can nudge it further any time.
+**The stop's name never changes.** Pinning a stop only attaches a
+precise GPS point behind the scenes — the list still shows
+"Cavendish/Westminster" (or whatever you typed), and a small grey line
+underneath it now reads `📍 Pinned exact location: ...` so you always
+know a stop has one. Reopening the 📍 panel on an already-pinned stop
+shows its current pin on the map again, so you can nudge it further
+any time — or tap **Remove Pin** to go back to using the address.
 
 > **Why not just show compass directions (N/E/S/W)?** Bus Dravin
 > originally tried that, but it doesn't hold up: a real intersection's

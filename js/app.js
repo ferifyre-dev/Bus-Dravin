@@ -9,6 +9,9 @@
   // to be safe, and split longer routes into linked parts.
   var MAX_STOPS_PER_LINK = 24;
 
+  // Each stop keeps its typed name (always shown in the list) separate from
+  // an optional precise GPS pin (used for the actual Maps search once set).
+  // Pinning a stop never overwrites its name.
   var stops = [];
   var cornerEditIndex = -1;
 
@@ -32,6 +35,7 @@
     cornerPanel: document.getElementById("corner-picker-panel"),
     cornerPanelStopLabel: document.getElementById("corner-panel-stop-label"),
     cornerStatus: document.getElementById("corner-status"),
+    cornerRemovePinBtn: document.getElementById("corner-remove-pin-btn"),
     useMyLocationBtn: document.getElementById("use-my-location-btn"),
     cornerSearchInput: document.getElementById("corner-search-input"),
     cornerSearchBtn: document.getElementById("corner-search-btn"),
@@ -42,12 +46,32 @@
     cornerCancelBtn: document.getElementById("corner-cancel-btn"),
   };
 
+  // ---------- stop data model ----------
+
+  function makeStop(text, pin) {
+    return { text: text, pin: pin || null };
+  }
+
+  // Accepts either a plain string (old saved-route format, or a stop typed
+  // as raw "lat,lng") or an already-shaped { text, pin } object.
+  function normalizeStop(value) {
+    if (value && typeof value === "object" && typeof value.text === "string") {
+      return makeStop(value.text, value.pin || null);
+    }
+    return makeStop(String(value == null ? "" : value), null);
+  }
+
   // ---------- storage helpers ----------
 
   function loadRoutes() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
+      var parsed = raw ? JSON.parse(raw) : {};
+      var normalized = {};
+      Object.keys(parsed).forEach(function (name) {
+        normalized[name] = (parsed[name] || []).map(normalizeStop);
+      });
+      return normalized;
     } catch (e) {
       return {};
     }
@@ -73,7 +97,7 @@
     try {
       var raw = localStorage.getItem(DRAFT_KEY);
       var parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.map(normalizeStop) : [];
     } catch (e) {
       return [];
     }
@@ -117,16 +141,21 @@
     return formatted;
   }
 
+  // A pinned stop always searches by its exact GPS point; otherwise fall
+  // back to the formatted address/intersection text.
+  function getMapsQueryForStop(stop, defaultCity) {
+    if (stop.pin) return stop.pin;
+    return formatStopForMaps(stop.text, defaultCity);
+  }
+
   // ---------- corner picker (side-of-street precision) ----------
   // The address-and-directions flow above gets you to the right intersection,
   // but Google Maps drops the pin at the crossing's center, not on the actual
   // curb — wrong side of a divided road, wrong corner of a 4-way stop, etc.
-  // Rather than have the driver translate compass directions (unreliable in
-  // a city like Montreal, where the street grid runs well off true north),
-  // this shows a real, draggable map and lets them place the pin by eye.
+  // The pin stays fixed at the center of the map frame; the map pans
+  // underneath it, so there's no marker to drag and nothing to misjudge.
 
   var cornerMap = null;
-  var cornerMarker = null;
 
   function setCornerStatus(message, type) {
     els.cornerStatus.textContent = message;
@@ -140,7 +169,6 @@
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(cornerMap);
-    cornerMarker = L.marker([0, 0], { draggable: true }).addTo(cornerMap);
     return cornerMap;
   }
 
@@ -148,31 +176,33 @@
     ensureCornerMap();
     els.cornerMapWrap.hidden = false;
     cornerMap.setView([lat, lon], 19);
-    cornerMarker.setLatLng([lat, lon]);
-    // Leaflet can't size itself correctly while its container was hidden.
+    // Leaflet can't size itself correctly while its container was hidden,
+    // so re-center once more after it corrects for the real container size.
     setTimeout(function () {
       cornerMap.invalidateSize();
+      cornerMap.setView([lat, lon], 19);
     }, 50);
   }
 
   function openCornerPicker(index) {
     cornerEditIndex = index;
-    els.cornerPanelStopLabel.textContent = stops[index];
+    var stop = stops[index];
+    els.cornerPanelStopLabel.textContent = stop.text;
     els.cornerManualInput.value = "";
     els.cornerMapWrap.hidden = true;
+    els.cornerRemovePinBtn.hidden = !stop.pin;
     setCornerStatus("", null);
     els.cornerPanel.hidden = false;
     els.cornerPanel.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    var stopText = stops[index];
-    if (looksLikeCoordinates(stopText)) {
+    if (stop.pin) {
       els.cornerSearchInput.value = "";
-      var parts = stopText.split(",");
+      var parts = stop.pin.split(",");
       showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
-      setCornerStatus("Showing this stop's current pin — drag to adjust, or search below to start over.", null);
+      setCornerStatus("Showing this stop's pinned location — pan the map to adjust, or search below to start over.", null);
     } else {
       var defaultCity = els.defaultCityInput.value.trim();
-      els.cornerSearchInput.value = formatStopForMaps(stopText, defaultCity);
+      els.cornerSearchInput.value = formatStopForMaps(stop.text, defaultCity);
       searchCornerIntersection();
     }
   }
@@ -184,11 +214,22 @@
 
   function applyCornerResult(lat, lon) {
     if (cornerEditIndex < 0 || cornerEditIndex >= stops.length) return;
-    var stopNumber = cornerEditIndex + 1;
-    stops[cornerEditIndex] = lat.toFixed(6) + "," + lon.toFixed(6);
+    var index = cornerEditIndex;
+    var stopNumber = index + 1;
+    stops[index].pin = lat.toFixed(6) + "," + lon.toFixed(6);
+    var stopName = stops[index].text;
     closeCornerPicker();
     renderStops();
-    setStatus("Stop " + stopNumber + " updated to the exact spot you picked.", "success");
+    setStatus('Stop ' + stopNumber + ' ("' + stopName + '") pinned to the exact spot you picked.', "success");
+  }
+
+  function removeCornerPin() {
+    if (cornerEditIndex < 0 || cornerEditIndex >= stops.length) return;
+    var index = cornerEditIndex;
+    stops[index].pin = null;
+    closeCornerPicker();
+    renderStops();
+    setStatus("Removed the pin from stop " + (index + 1) + " — using the address again.", "success");
   }
 
   function useMyLocation() {
@@ -202,7 +243,7 @@
       function (pos) {
         els.useMyLocationBtn.disabled = false;
         showPointOnMap(pos.coords.latitude, pos.coords.longitude);
-        setCornerStatus("Found your location — drag the pin if it's not exactly right, then tap Use This Pin.", null);
+        setCornerStatus("Found your location — pan the map if it's not exactly right, then tap Use This Pin.", null);
       },
       function (err) {
         els.useMyLocationBtn.disabled = false;
@@ -238,7 +279,7 @@
     geocodeQuery(query)
       .then(function (result) {
         showPointOnMap(result.lat, result.lon);
-        setCornerStatus("Found: " + result.name + " — drag the pin to the exact corner, then tap Use This Pin.", null);
+        setCornerStatus("Found: " + result.name + " — pan the map so the pin lands on the exact corner, then tap Use This Pin.", null);
       })
       .catch(function (err) {
         setCornerStatus(err.message || "Couldn't reach the lookup service. Try manual coordinates below.", "error");
@@ -256,13 +297,13 @@
     }
     var parts = text.split(",");
     showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
-    setCornerStatus("Drag the pin if needed, then tap Use This Pin.", null);
+    setCornerStatus("Pan the map if needed, then tap Use This Pin.", null);
   }
 
   function confirmCornerPin() {
-    if (!cornerMarker) return;
-    var pos = cornerMarker.getLatLng();
-    applyCornerResult(pos.lat, pos.lng);
+    if (!cornerMap) return;
+    var center = cornerMap.getCenter();
+    applyCornerResult(center.lat, center.lng);
   }
 
   // ---------- stop list rendering ----------
@@ -271,7 +312,7 @@
     els.stopList.innerHTML = "";
     els.emptyMessage.style.display = stops.length === 0 ? "block" : "none";
 
-    stops.forEach(function (stopText, index) {
+    stops.forEach(function (stop, index) {
       var li = document.createElement("li");
       li.className = "stop-item";
 
@@ -294,14 +335,14 @@
         role.textContent = roleLabel;
         textWrap.appendChild(role);
       }
-      textWrap.appendChild(document.createTextNode(stopText));
+      textWrap.appendChild(document.createTextNode(stop.text));
 
       var defaultCity = els.defaultCityInput.value.trim();
-      var formatted = formatStopForMaps(stopText, defaultCity);
-      if (formatted !== stopText) {
+      var mapsQuery = getMapsQueryForStop(stop, defaultCity);
+      if (mapsQuery !== stop.text) {
         var preview = document.createElement("span");
         preview.className = "stop-preview";
-        preview.textContent = "Maps search: " + formatted;
+        preview.textContent = stop.pin ? "📍 Pinned exact location: " + stop.pin : "Maps search: " + mapsQuery;
         textWrap.appendChild(preview);
       }
 
@@ -318,7 +359,10 @@
       });
       downBtn.disabled = index === stops.length - 1;
 
-      var pinBtn = makeIconButton("📍", "Pin exact location for stop " + (index + 1), function () {
+      var pinLabel = stop.pin
+        ? "Adjust pinned location for stop " + (index + 1)
+        : "Pin exact location for stop " + (index + 1);
+      var pinBtn = makeIconButton("📍", pinLabel, function () {
         openCornerPicker(index);
       });
 
@@ -356,7 +400,7 @@
   function addStop(text) {
     var trimmed = (text || "").trim();
     if (!trimmed) return false;
-    stops.push(trimmed);
+    stops.push(makeStop(trimmed, null));
     return true;
   }
 
@@ -507,7 +551,7 @@
 
   function buildMapsUrl(chunk, defaultCity) {
     var formattedChunk = chunk.map(function (stop) {
-      return formatStopForMaps(stop, defaultCity);
+      return getMapsQueryForStop(stop, defaultCity);
     });
     var origin = encodeURIComponent(formattedChunk[0]);
     var destination = encodeURIComponent(formattedChunk[formattedChunk.length - 1]);
@@ -613,6 +657,7 @@
   });
   els.cornerManualBtn.addEventListener("click", showManualOnMap);
   els.cornerConfirmBtn.addEventListener("click", confirmCornerPin);
+  els.cornerRemovePinBtn.addEventListener("click", removeCornerPin);
   els.cornerCancelBtn.addEventListener("click", closeCornerPicker);
   els.saveRouteBtn.addEventListener("click", saveCurrentRoute);
   els.loadRouteBtn.addEventListener("click", loadSelectedRoute);

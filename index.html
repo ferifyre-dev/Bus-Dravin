@@ -67,6 +67,7 @@
         <h3>Pin the Exact Stop Location</h3>
         <p class="help-text">Refining: <strong id="corner-panel-stop-label"></strong></p>
         <p id="corner-status" class="help-text" role="status" aria-live="polite"></p>
+        <button id="corner-remove-pin-btn" type="button" class="btn btn-danger btn-small" hidden>Remove Pin (use the address instead)</button>
 
         <div class="corner-option">
           <button id="use-my-location-btn" type="button" class="btn btn-secondary btn-large">Use My Current Location</button>
@@ -90,8 +91,11 @@
         </div>
 
         <div id="corner-map-wrap" hidden>
-          <p class="help-text">Drag the pin to the exact spot on the map &mdash; the real corner, on the correct side of the street &mdash; then confirm.</p>
-          <div id="corner-map"></div>
+          <p class="help-text">The pin stays put in the middle &mdash; drag the map itself so the pin lands on the real corner, the correct side of the street, then confirm.</p>
+          <div class="map-frame">
+            <div id="corner-map"></div>
+            <div class="center-pin" aria-hidden="true">📍</div>
+          </div>
           <button id="corner-confirm-btn" type="button" class="btn btn-primary btn-large">Use This Pin</button>
         </div>
 

@@ -318,6 +318,10 @@ code {
   font-size: 1rem;
 }
 
+#corner-remove-pin-btn {
+  margin-bottom: 0.5rem;
+}
+
 .corner-option {
   margin: 0.9rem 0;
   padding-bottom: 0.9rem;
@@ -328,12 +332,28 @@ code {
   border-bottom: none;
 }
 
+.map-frame {
+  position: relative;
+  margin: 0.5rem 0 0.75rem;
+}
+
 #corner-map {
   height: 260px;
   width: 100%;
   border-radius: 8px;
   border: 1px solid var(--border);
-  margin: 0.5rem 0 0.75rem;
+}
+
+.center-pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  font-size: 2rem;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 700;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45));
 }
 
 .status-message {
