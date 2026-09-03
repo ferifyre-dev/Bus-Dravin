@@ -10,6 +10,7 @@
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 </head>
 <body>
   <header class="app-header">
@@ -69,37 +70,14 @@
 
         <div class="corner-option">
           <button id="use-my-location-btn" type="button" class="btn btn-secondary btn-large">Use My Current Location</button>
-          <p class="help-text">Best option if you're standing at the stop right now &mdash; one tap, no searching needed.</p>
+          <p class="help-text">Best option if you're standing at the stop right now.</p>
         </div>
 
         <div class="corner-option">
-          <label for="corner-search-input">Or search the intersection, then pick the corner</label>
+          <label for="corner-search-input">Or search an address / intersection</label>
           <div class="row">
             <input id="corner-search-input" type="text" placeholder="e.g. Cavendish & Westminster, Montreal, QC" />
             <button id="corner-search-btn" type="button" class="btn btn-secondary">Find</button>
-          </div>
-
-          <div id="compass-wrap" hidden>
-            <p class="help-text">Found: <strong id="corner-found-name"></strong></p>
-            <label for="corner-distance-select">Distance from the middle of the intersection</label>
-            <select id="corner-distance-select">
-              <option value="10">10 m &mdash; narrow / residential street</option>
-              <option value="20" selected>20 m &mdash; typical intersection</option>
-              <option value="35">35 m &mdash; wide / major road</option>
-            </select>
-            <p class="help-text">Tap the corner where the stop actually is:</p>
-            <div class="compass-grid">
-              <button type="button" class="compass-btn" data-num="8" data-bearing="315">8<span>NW</span></button>
-              <button type="button" class="compass-btn" data-num="1" data-bearing="0">1<span>N</span></button>
-              <button type="button" class="compass-btn" data-num="2" data-bearing="45">2<span>NE</span></button>
-              <button type="button" class="compass-btn" data-num="7" data-bearing="270">7<span>W</span></button>
-              <div class="compass-center" aria-hidden="true">📍</div>
-              <button type="button" class="compass-btn" data-num="3" data-bearing="90">3<span>E</span></button>
-              <button type="button" class="compass-btn" data-num="6" data-bearing="225">6<span>SW</span></button>
-              <button type="button" class="compass-btn" data-num="5" data-bearing="180">5<span>S</span></button>
-              <button type="button" class="compass-btn" data-num="4" data-bearing="135">4<span>SE</span></button>
-            </div>
-            <p class="help-text">This is an estimate, offset from the intersection's center &mdash; check the pin looks right before you rely on it.</p>
           </div>
         </div>
 
@@ -107,8 +85,14 @@
           <label for="corner-manual-input">Or type coordinates you already have</label>
           <div class="row">
             <input id="corner-manual-input" type="text" placeholder="e.g. 45.50231, -73.65872" />
-            <button id="corner-manual-btn" type="button" class="btn btn-secondary">Use These</button>
+            <button id="corner-manual-btn" type="button" class="btn btn-secondary">Show on Map</button>
           </div>
+        </div>
+
+        <div id="corner-map-wrap" hidden>
+          <p class="help-text">Drag the pin to the exact spot on the map &mdash; the real corner, on the correct side of the street &mdash; then confirm.</p>
+          <div id="corner-map"></div>
+          <button id="corner-confirm-btn" type="button" class="btn btn-primary btn-large">Use This Pin</button>
         </div>
 
         <button id="corner-cancel-btn" type="button" class="btn btn-secondary btn-small">Cancel</button>
@@ -140,6 +124,7 @@
     <p>Everything you type stays on this device only &mdash; nothing is sent anywhere except when you choose to open Google Maps.</p>
   </footer>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

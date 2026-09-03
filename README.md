@@ -136,35 +136,39 @@ intersection — not necessarily the correct curb. On a divided road, a
 4-way stop, or a wide arterial road, that can mean the wrong side of the
 street or the wrong corner entirely.
 
-To fix a specific stop, tap the **📍** button next to it in Step 3. You
-get three ways to pin it exactly:
+To fix a specific stop, tap the **📍** button next to it in Step 3. This
+opens a real, draggable map — no compass directions to figure out, just
+drag the pin to the actual corner you mean and confirm:
 
-**1. Use My Current Location** — if you're standing at the stop right
-now, this is the most accurate option. One tap, done.
+1. When the panel opens, it automatically searches for that stop and
+   shows it on the map — you don't need to type or search anything
+   again unless the result looks wrong.
+2. **Drag the pin** to the exact spot: the correct curb, the correct
+   side of a divided road, the correct corner of a 4-way stop.
+3. Tap **Use This Pin**.
 
-**2. Search, then pick the corner** — search the intersection (e.g.
-`Cavendish & Westminster, Montreal, QC`), then tap one of 8 numbered
-compass positions around it:
+You also get two other ways to get a starting point on the map, both
+useful in different situations:
 
-```
-   8(NW)   1(N)   2(NE)
-   7(W)     📍     3(E)
-   6(SW)   5(S)   4(SE)
-```
+- **Use My Current Location** — if you're standing at the stop right
+  now, this drops the pin at your phone's GPS position; drag to
+  fine-tune if it's slightly off, then confirm.
+- **Type coordinates you already have** — if you've already found the
+  exact spot another way, this shows it on the map so you can double
+  check (and still adjust) before confirming.
 
-Pick a distance (10m for a narrow street, 20m typical, 35m for a wide
-road) and tap the corner where the stop actually is. This is an
-estimate — it offsets from the intersection's center in that compass
-direction, so it works best on a fairly standard 4-way crossing. Check
-where the pin lands before you rely on it.
+Whichever method you start with, that stop switches from its address
+text to an exact GPS point, which Google Maps will always treat as-is
+— no guessing. Reopening the 📍 panel on an already-pinned stop shows
+its current pin on the map again, so you can nudge it further any time.
 
-**3. Type coordinates you already have** — if you've already found the
-exact spot another way (e.g. long-pressed it in the Google Maps app and
-copied the coordinates), paste them in directly.
-
-Whichever method you use, that stop switches from its address text to
-an exact GPS point, which Google Maps will always treat as-is — no
-guessing.
+> **Why not just show compass directions (N/E/S/W)?** Bus Dravin
+> originally tried that, but it doesn't hold up: a real intersection's
+> true corners only sit on the diagonals (NE/NW/SE/SW) — the cardinal
+> points sit in the middle of the road. And in a city like Montreal,
+> where the street grid runs well off true north, "north" on a compass
+> doesn't match what the map actually shows you. Dragging a pin on a
+> real map sidesteps both problems.
 
 ---
 
@@ -177,6 +181,7 @@ guessing.
 - Your stop list is saved automatically as a draft on this device, so if
   you close the tab by accident, your unsaved list is still there when
   you come back.
-- To actually open a route, you need an internet connection (Google Maps
-  needs it to draw the directions). Everything else — entering and
-  saving stops — works offline once the app is installed.
+- You need an internet connection for anything that talks to an outside
+  map: opening a route, searching an intersection, or showing the pin
+  map in the 📍 panel. Entering, reordering, and saving stops all work
+  offline once the app is installed.

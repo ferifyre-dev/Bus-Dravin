@@ -11,7 +11,6 @@
 
   var stops = [];
   var cornerEditIndex = -1;
-  var lastGeocodeResult = null;
 
   var els = {
     defaultCityInput: document.getElementById("default-city-input"),
@@ -36,15 +35,12 @@
     useMyLocationBtn: document.getElementById("use-my-location-btn"),
     cornerSearchInput: document.getElementById("corner-search-input"),
     cornerSearchBtn: document.getElementById("corner-search-btn"),
-    compassWrap: document.getElementById("compass-wrap"),
-    cornerFoundName: document.getElementById("corner-found-name"),
-    cornerDistanceSelect: document.getElementById("corner-distance-select"),
     cornerManualInput: document.getElementById("corner-manual-input"),
     cornerManualBtn: document.getElementById("corner-manual-btn"),
+    cornerMapWrap: document.getElementById("corner-map-wrap"),
+    cornerConfirmBtn: document.getElementById("corner-confirm-btn"),
     cornerCancelBtn: document.getElementById("corner-cancel-btn"),
   };
-
-  var compassButtons = document.querySelectorAll(".compass-btn");
 
   // ---------- storage helpers ----------
 
@@ -125,28 +121,64 @@
   // The address-and-directions flow above gets you to the right intersection,
   // but Google Maps drops the pin at the crossing's center, not on the actual
   // curb — wrong side of a divided road, wrong corner of a 4-way stop, etc.
-  // This lets a specific stop be swapped for a precise GPS point instead.
+  // Rather than have the driver translate compass directions (unreliable in
+  // a city like Montreal, where the street grid runs well off true north),
+  // this shows a real, draggable map and lets them place the pin by eye.
+
+  var cornerMap = null;
+  var cornerMarker = null;
 
   function setCornerStatus(message, type) {
     els.cornerStatus.textContent = message;
     els.cornerStatus.className = "help-text" + (type ? " " + type : "");
   }
 
+  function ensureCornerMap() {
+    if (cornerMap) return cornerMap;
+    cornerMap = L.map("corner-map");
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(cornerMap);
+    cornerMarker = L.marker([0, 0], { draggable: true }).addTo(cornerMap);
+    return cornerMap;
+  }
+
+  function showPointOnMap(lat, lon) {
+    ensureCornerMap();
+    els.cornerMapWrap.hidden = false;
+    cornerMap.setView([lat, lon], 19);
+    cornerMarker.setLatLng([lat, lon]);
+    // Leaflet can't size itself correctly while its container was hidden.
+    setTimeout(function () {
+      cornerMap.invalidateSize();
+    }, 50);
+  }
+
   function openCornerPicker(index) {
     cornerEditIndex = index;
-    lastGeocodeResult = null;
     els.cornerPanelStopLabel.textContent = stops[index];
-    els.cornerSearchInput.value = "";
     els.cornerManualInput.value = "";
-    els.compassWrap.hidden = true;
+    els.cornerMapWrap.hidden = true;
     setCornerStatus("", null);
     els.cornerPanel.hidden = false;
     els.cornerPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    var stopText = stops[index];
+    if (looksLikeCoordinates(stopText)) {
+      els.cornerSearchInput.value = "";
+      var parts = stopText.split(",");
+      showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
+      setCornerStatus("Showing this stop's current pin — drag to adjust, or search below to start over.", null);
+    } else {
+      var defaultCity = els.defaultCityInput.value.trim();
+      els.cornerSearchInput.value = formatStopForMaps(stopText, defaultCity);
+      searchCornerIntersection();
+    }
   }
 
   function closeCornerPicker() {
     cornerEditIndex = -1;
-    lastGeocodeResult = null;
     els.cornerPanel.hidden = true;
   }
 
@@ -169,7 +201,8 @@
     navigator.geolocation.getCurrentPosition(
       function (pos) {
         els.useMyLocationBtn.disabled = false;
-        applyCornerResult(pos.coords.latitude, pos.coords.longitude);
+        showPointOnMap(pos.coords.latitude, pos.coords.longitude);
+        setCornerStatus("Found your location — drag the pin if it's not exactly right, then tap Use This Pin.", null);
       },
       function (err) {
         els.useMyLocationBtn.disabled = false;
@@ -200,16 +233,12 @@
       setCornerStatus("Type an intersection or address to search.", "error");
       return;
     }
-    els.compassWrap.hidden = true;
-    lastGeocodeResult = null;
     setCornerStatus("Looking up…", null);
     els.cornerSearchBtn.disabled = true;
     geocodeQuery(query)
       .then(function (result) {
-        lastGeocodeResult = result;
-        els.cornerFoundName.textContent = result.name;
-        els.compassWrap.hidden = false;
-        setCornerStatus("", null);
+        showPointOnMap(result.lat, result.lon);
+        setCornerStatus("Found: " + result.name + " — drag the pin to the exact corner, then tap Use This Pin.", null);
       })
       .catch(function (err) {
         setCornerStatus(err.message || "Couldn't reach the lookup service. Try manual coordinates below.", "error");
@@ -219,28 +248,21 @@
       });
   }
 
-  // Offsets a lat/lon by a compass bearing and distance, using a flat-earth
-  // approximation — accurate enough at the 10-35m scale of a single corner.
-  function offsetCoordinate(lat, lon, bearingDeg, distanceMeters) {
-    var EARTH_RADIUS_M = 6371000;
-    var bearingRad = (bearingDeg * Math.PI) / 180;
-    var latRad = (lat * Math.PI) / 180;
-    var dLat = (distanceMeters * Math.cos(bearingRad)) / EARTH_RADIUS_M;
-    var dLon = (distanceMeters * Math.sin(bearingRad)) / (EARTH_RADIUS_M * Math.cos(latRad));
-    return {
-      lat: lat + (dLat * 180) / Math.PI,
-      lon: lon + (dLon * 180) / Math.PI,
-    };
-  }
-
-  function useManualCoordinates() {
+  function showManualOnMap() {
     var text = els.cornerManualInput.value.trim();
     if (!looksLikeCoordinates(text)) {
       setCornerStatus("Enter coordinates like 45.50231, -73.65872.", "error");
       return;
     }
     var parts = text.split(",");
-    applyCornerResult(parseFloat(parts[0]), parseFloat(parts[1]));
+    showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
+    setCornerStatus("Drag the pin if needed, then tap Use This Pin.", null);
+  }
+
+  function confirmCornerPin() {
+    if (!cornerMarker) return;
+    var pos = cornerMarker.getLatLng();
+    applyCornerResult(pos.lat, pos.lng);
   }
 
   // ---------- stop list rendering ----------
@@ -589,17 +611,9 @@
       searchCornerIntersection();
     }
   });
-  els.cornerManualBtn.addEventListener("click", useManualCoordinates);
+  els.cornerManualBtn.addEventListener("click", showManualOnMap);
+  els.cornerConfirmBtn.addEventListener("click", confirmCornerPin);
   els.cornerCancelBtn.addEventListener("click", closeCornerPicker);
-  compassButtons.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      if (!lastGeocodeResult) return;
-      var bearing = parseFloat(btn.getAttribute("data-bearing"));
-      var distance = parseFloat(els.cornerDistanceSelect.value);
-      var offset = offsetCoordinate(lastGeocodeResult.lat, lastGeocodeResult.lon, bearing, distance);
-      applyCornerResult(offset.lat, offset.lon);
-    });
-  });
   els.saveRouteBtn.addEventListener("click", saveCurrentRoute);
   els.loadRouteBtn.addEventListener("click", loadSelectedRoute);
   els.deleteRouteBtn.addEventListener("click", deleteSelectedRoute);

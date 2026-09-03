@@ -328,51 +328,12 @@ code {
   border-bottom: none;
 }
 
-.compass-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 0.4rem;
-  max-width: 260px;
-  margin: 0.75rem auto;
-}
-
-.compass-btn {
-  aspect-ratio: 1;
+#corner-map {
+  height: 260px;
+  width: 100%;
   border-radius: 8px;
-  border: 2px solid var(--yellow-dark);
-  background: #fff8e6;
-  font-weight: 700;
-  font-size: 1.1rem;
-  line-height: 1.1;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.compass-btn span {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #666;
-  letter-spacing: 0.03em;
-}
-
-.compass-btn:hover {
-  background: var(--yellow);
-}
-
-.compass-btn:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.compass-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
+  border: 1px solid var(--border);
+  margin: 0.5rem 0 0.75rem;
 }
 
 .status-message {
