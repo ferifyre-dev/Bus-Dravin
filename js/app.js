@@ -3,6 +3,7 @@
 
   var STORAGE_KEY = "busDravin.routes.v1";
   var DRAFT_KEY = "busDravin.draftStops.v1";
+  var CITY_KEY = "busDravin.defaultCity.v1";
   // Google Maps' consumer directions URL supports 25 total stops
   // (origin + destination + waypoints). We stay one under that
   // to be safe, and split longer routes into linked parts.
@@ -11,6 +12,7 @@
   var stops = [];
 
   var els = {
+    defaultCityInput: document.getElementById("default-city-input"),
     pasteArea: document.getElementById("paste-area"),
     addPastedBtn: document.getElementById("add-pasted-btn"),
     singleInput: document.getElementById("single-stop-input"),
@@ -64,6 +66,44 @@
     }
   }
 
+  function loadDefaultCity() {
+    try {
+      return localStorage.getItem(CITY_KEY) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function saveDefaultCity(city) {
+    try {
+      localStorage.setItem(CITY_KEY, city);
+    } catch (e) {
+      /* non-fatal */
+    }
+  }
+
+  // ---------- formatting a stop for Google Maps ----------
+  // Bus route sheets often list stops as cross streets (e.g. "Cavendish/Westminster")
+  // with no city. Google Maps needs "Cavendish & Westminster, Montreal, QC" to find it
+  // reliably, so we transform the text just for the Maps search — what you typed stays
+  // untouched in the list above.
+
+  function looksLikeCoordinates(text) {
+    return /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(text.trim());
+  }
+
+  function formatStopForMaps(text, defaultCity) {
+    var formatted = text.trim();
+    if (looksLikeCoordinates(formatted)) return formatted;
+
+    formatted = formatted.replace(/\s*\/\s*/g, " & ");
+
+    if (defaultCity && formatted.indexOf(",") === -1) {
+      formatted = formatted + ", " + defaultCity;
+    }
+    return formatted;
+  }
+
   // ---------- stop list rendering ----------
 
   function renderStops() {
@@ -94,6 +134,15 @@
         textWrap.appendChild(role);
       }
       textWrap.appendChild(document.createTextNode(stopText));
+
+      var defaultCity = els.defaultCityInput.value.trim();
+      var formatted = formatStopForMaps(stopText, defaultCity);
+      if (formatted !== stopText) {
+        var preview = document.createElement("span");
+        preview.className = "stop-preview";
+        preview.textContent = "Maps search: " + formatted;
+        textWrap.appendChild(preview);
+      }
 
       var controls = document.createElement("span");
       controls.className = "stop-controls";
@@ -286,10 +335,13 @@
     return chunks;
   }
 
-  function buildMapsUrl(chunk) {
-    var origin = encodeURIComponent(chunk[0]);
-    var destination = encodeURIComponent(chunk[chunk.length - 1]);
-    var middle = chunk.slice(1, -1);
+  function buildMapsUrl(chunk, defaultCity) {
+    var formattedChunk = chunk.map(function (stop) {
+      return formatStopForMaps(stop, defaultCity);
+    });
+    var origin = encodeURIComponent(formattedChunk[0]);
+    var destination = encodeURIComponent(formattedChunk[formattedChunk.length - 1]);
+    var middle = formattedChunk.slice(1, -1);
     var url =
       "https://www.google.com/maps/dir/?api=1" +
       "&travelmode=driving" +
@@ -307,11 +359,12 @@
       return;
     }
 
+    var defaultCity = els.defaultCityInput.value.trim();
     var chunks = chunkStops(stops, MAX_STOPS_PER_LINK);
     var opened = 0;
 
     chunks.forEach(function (chunk, i) {
-      var url = buildMapsUrl(chunk);
+      var url = buildMapsUrl(chunk, defaultCity);
       var win = window.open(url, "_blank", "noopener,noreferrer");
       if (win) opened++;
     });
@@ -373,6 +426,11 @@
     }
   });
 
+  els.defaultCityInput.addEventListener("input", function () {
+    saveDefaultCity(els.defaultCityInput.value);
+    renderStops();
+  });
+
   els.clearAllBtn.addEventListener("click", clearAllStops);
   els.saveRouteBtn.addEventListener("click", saveCurrentRoute);
   els.loadRouteBtn.addEventListener("click", loadSelectedRoute);
@@ -382,6 +440,7 @@
   // ---------- init ----------
 
   stops = loadDraft();
+  els.defaultCityInput.value = loadDefaultCity();
   refreshRouteSelect();
   renderStops();
 

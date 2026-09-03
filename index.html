@@ -39,6 +39,10 @@
       <h2 id="add-heading">2. Add Your Stops</h2>
       <p class="help-text">Paste your whole stop list at once (one address per line), or add stops one at a time below. The order you enter is the order the route will drive.</p>
 
+      <label for="default-city-input">Default city &amp; province (used to fill in stops that don't have one)</label>
+      <input id="default-city-input" type="text" placeholder="e.g. Montreal, QC" />
+      <p class="help-text">Set this once. Any stop you type without a city — including cross streets like <code>Cavendish/Westminster</code> — will automatically get this city added, and the slash will be turned into "&amp;" so Google Maps reads it as an intersection.</p>
+
       <label for="paste-area">Paste stop list</label>
       <textarea id="paste-area" rows="4" placeholder="123 Maple St, Montreal, QC&#10;456 Oak Ave, Montreal, QC&#10;789 Pine Rd, Montreal, QC"></textarea>
       <button id="add-pasted-btn" type="button" class="btn btn-secondary">Add Pasted Stops</button>

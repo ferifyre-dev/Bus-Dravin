@@ -117,6 +117,17 @@ textarea {
   margin-bottom: 0.6rem;
 }
 
+#default-city-input {
+  margin-bottom: 0.4rem;
+}
+
+code {
+  background: #eef0f3;
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.9em;
+}
+
 .row {
   display: flex;
   gap: 0.5rem;
@@ -243,6 +254,13 @@ textarea {
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #777;
+}
+
+.stop-preview {
+  display: block;
+  font-size: 0.78rem;
+  color: #806400;
+  margin-top: 0.1rem;
 }
 
 .stop-controls {

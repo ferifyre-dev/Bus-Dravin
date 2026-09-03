@@ -66,24 +66,30 @@ This turns the app into a real web address you can open from your phone.
 
 ## How to use it
 
-### 1. Add your stops
+### 1. Set your default city (once)
+Type your city and province (e.g. `Montreal, QC`) into the **Default
+city & province** box. This gets remembered on this device, so you only
+set it once. See "Cross streets and short stop names" below for why this
+matters.
+
+### 2. Add your stops
 - **Paste a whole list at once:** paste your stops into the big box, one
   address per line, then tap **Add Pasted Stops**.
 - **Add one stop at a time:** type an address in the smaller box and tap
   **Add** (or press Enter).
 
-### 2. Check the order
+### 3. Check the order
 - The first stop is where the route starts. The last stop is where it
   ends. Both are labelled so it's clear at a glance.
 - Use the **↑** / **↓** buttons to move a stop.
 - Use the **✕** button to remove a stop.
 
-### 3. Save the route (optional, but recommended)
+### 4. Save the route (optional, but recommended)
 - Type a name like `AM Route` and tap **Save Route**.
 - Next time, pick it from the dropdown at the top and tap **Load** —
   no retyping.
 
-### 4. Open it
+### 5. Open it
 - Tap **Open Route in Google Maps**.
 - Google Maps opens in a new tab (or the Google Maps app, if installed)
   with driving directions through every stop, in order.
@@ -101,11 +107,32 @@ parts were opened.
 
 ---
 
+## Cross streets and short stop names
+
+Bus stop sheets often list stops as an intersection, like
+`Cavendish/Westminster`, instead of a full street address. Google Maps
+can find those, but only if they're written as `Cavendish & Westminster`
+**with a city attached** — a plain slash and no city usually sends you
+to the wrong place, or nowhere at all.
+
+Bus Dravin fixes this for you automatically, as long as your **Default
+city & province** box (Step 1) is filled in:
+
+- `/` is turned into `&` (Cavendish/Westminster → Cavendish & Westminster)
+- your default city is added to any stop that doesn't already mention one
+
+What you typed stays exactly as-is in your stop list. Underneath any
+stop that got adjusted, you'll see a small grey line like
+`Maps search: Cavendish & Westminster, Montreal, QC` — that's exactly
+what will be searched. Check it before you open the route, especially
+for any stop that doesn't look right.
+
+---
+
 ## Notes
 
-- Addresses work best when they include the city (e.g.
-  `123 Maple St, Montreal, QC`), since that avoids Google Maps guessing
-  the wrong location.
+- Full street addresses also work, and don't need the default city —
+  just include the city yourself, e.g. `123 Maple St, Montreal, QC`.
 - GPS coordinates also work — just enter them as `lat,lng` on their own
   line (e.g. `45.5019,-73.5674`).
 - Your stop list is saved automatically as a draft on this device, so if
