@@ -168,6 +168,24 @@
     );
   }
 
+  // The map used to be created once and reused for the whole session. If
+  // that first creation ever partially failed (map initialized but the tile
+  // layer didn't attach, for example), the broken instance stayed cached and
+  // got silently reused — zero tiles, zero error — for every stop after
+  // that, which looks exactly like "the same stops always fail" even though
+  // it's really "everything after the first glitch." Destroying and
+  // rebuilding fresh on every open removes any chance of that happening.
+  function destroyCornerMap() {
+    if (cornerMap) {
+      try {
+        cornerMap.remove();
+      } catch (e) {
+        /* best-effort cleanup */
+      }
+      cornerMap = null;
+    }
+  }
+
   function setCornerStatus(message, type) {
     els.cornerStatus.textContent = message;
     els.cornerStatus.className = "help-text" + (type ? " " + type : "");
@@ -243,6 +261,7 @@
       renderStops();
     }
     cornerEditIndex = index;
+    destroyCornerMap();
     var stop = stops[index];
     els.cornerPanelStopLabel.textContent = stop.text;
     els.cornerManualInput.value = "";
@@ -273,6 +292,7 @@
       clearTimeout(tileWatchdogTimer);
       tileWatchdogTimer = null;
     }
+    destroyCornerMap();
     els.cornerPanel.hidden = true;
   }
 
