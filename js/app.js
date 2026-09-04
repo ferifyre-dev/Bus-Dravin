@@ -40,6 +40,7 @@
     useMyLocationBtn: document.getElementById("use-my-location-btn"),
     cornerSearchInput: document.getElementById("corner-search-input"),
     cornerSearchBtn: document.getElementById("corner-search-btn"),
+    cornerGoogleMapsBtn: document.getElementById("corner-google-maps-btn"),
     cornerManualInput: document.getElementById("corner-manual-input"),
     cornerManualBtn: document.getElementById("corner-manual-btn"),
     cornerMapWrap: document.getElementById("corner-map-wrap"),
@@ -356,7 +357,7 @@
       })
       .then(function (results) {
         if (!results || results.length === 0) {
-          throw new Error("No location found for that search. Try adding the city, or use manual coordinates below.");
+          throw new Error("No location found for that search. Try \"Open This Search in Google Maps\" below, or add the city and try again.");
         }
         return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon), name: results[0].display_name };
       })
@@ -392,6 +393,22 @@
       .finally(function () {
         els.cornerSearchBtn.disabled = false;
       });
+  }
+
+  function openSearchInGoogleMaps() {
+    var query = els.cornerSearchInput.value.trim();
+    if (!query && cornerEditIndex >= 0 && stops[cornerEditIndex]) {
+      query = stops[cornerEditIndex].text;
+    }
+    if (!query) {
+      setCornerStatus("Type something to search first.", "error");
+      return;
+    }
+    var url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query);
+    var win = window.open(url, "_blank", "noopener,noreferrer");
+    if (!win) {
+      setCornerStatus("Your browser blocked the popup. Allow popups for this app, then try again.", "error");
+    }
   }
 
   function showManualOnMap() {
@@ -850,6 +867,7 @@
       searchCornerIntersection();
     }
   });
+  els.cornerGoogleMapsBtn.addEventListener("click", openSearchInGoogleMaps);
   els.cornerManualBtn.addEventListener("click", showManualOnMap);
   els.cornerConfirmBtn.addEventListener("click", confirmCornerPin);
   els.cornerRemovePinBtn.addEventListener("click", removeCornerPin);

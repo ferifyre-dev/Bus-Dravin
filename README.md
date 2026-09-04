@@ -154,15 +154,23 @@ to figure out, and no dragging a marker around either:
    corner of a 4-way stop.
 3. Tap **Use This Pin**.
 
-You also get two other ways to get a starting point on the map, both
-useful in different situations:
+You also get other ways to get a starting point on the map:
 
 - **Use My Current Location** — if you're standing at the stop right
   now, this centers the map on your phone's GPS position; pan to
   fine-tune if it's slightly off, then confirm.
-- **Type coordinates you already have** — if you've already found the
-  exact spot another way, this shows it on the map so you can double
-  check (and still adjust) before confirming.
+- **Open This Search in Google Maps** — the 📍 search box uses a free
+  address lookup (Nominatim) that's noticeably weaker than Google's,
+  especially at resolving intersections. If it says "No location
+  found" for a stop that opens fine with the main **Open Route**
+  button, this is why — not a bug, just a weaker free tool. Tap this
+  to open the exact same search in Google Maps, find the spot there,
+  long-press it to see its coordinates, then paste them into the box
+  below.
+- **Type coordinates you already have** — whether from the Google
+  Maps fallback above or found some other way, this shows the point
+  on the map so you can double check (and still adjust) before
+  confirming.
 
 **The stop's name never changes.** Pinning a stop only attaches a
 precise GPS point behind the scenes — the list still shows
