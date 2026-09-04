@@ -82,6 +82,11 @@ matters.
 - The first stop is where the route starts. The last stop is where it
   ends. Both are labelled so it's clear at a glance.
 - Use the **↑** / **↓** buttons to move a stop.
+- Use the **✏️** button to fix a typo or change a stop's name in
+  place — no need to delete and re-add it. Press **Enter** or tap
+  **Save** to keep it, **Escape** or **Cancel** to back out. If that
+  stop already has a pinned exact location (see below), the pin stays
+  put — editing the name doesn't touch it.
 - Use the **✕** button to remove a stop.
 
 ### 4. Save the route (optional, but recommended)

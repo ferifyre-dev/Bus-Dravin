@@ -14,6 +14,7 @@
   // Pinning a stop never overwrites its name.
   var stops = [];
   var cornerEditIndex = -1;
+  var editingIndex = -1;
 
   var els = {
     defaultCityInput: document.getElementById("default-city-input"),
@@ -173,18 +174,29 @@
   }
 
   function showPointOnMap(lat, lon) {
-    ensureCornerMap();
+    // Unhide BEFORE touching Leaflet, so a first-ever map creation measures
+    // its real size instead of 0x0. A hidden/just-shown container can still
+    // be mid-layout for a frame or two (especially with the panel's own
+    // scroll-into-view animation running), so a flat setTimeout guess isn't
+    // reliable — wait for an actual paint via requestAnimationFrame instead,
+    // which is what was intermittently leaving the map tiles blank.
     els.cornerMapWrap.hidden = false;
+    ensureCornerMap();
+    cornerMap.invalidateSize();
     cornerMap.setView([lat, lon], 19);
-    // Leaflet can't size itself correctly while its container was hidden,
-    // so re-center once more after it corrects for the real container size.
-    setTimeout(function () {
-      cornerMap.invalidateSize();
-      cornerMap.setView([lat, lon], 19);
-    }, 50);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        cornerMap.invalidateSize();
+        cornerMap.setView([lat, lon], 19);
+      });
+    });
   }
 
   function openCornerPicker(index) {
+    if (editingIndex >= 0) {
+      editingIndex = -1;
+      renderStops();
+    }
     cornerEditIndex = index;
     var stop = stops[index];
     els.cornerPanelStopLabel.textContent = stop.text;
@@ -321,6 +333,53 @@
       badge.textContent = String(index + 1);
       badge.setAttribute("aria-hidden", "true");
 
+      if (index === editingIndex) {
+        li.classList.add("stop-item-editing");
+
+        var editInput = document.createElement("input");
+        editInput.type = "text";
+        editInput.className = "stop-edit-input";
+        editInput.value = stop.text;
+        editInput.setAttribute("aria-label", "Edit stop " + (index + 1));
+        editInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            saveEditStop(index, editInput.value);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            cancelEditStop();
+          }
+        });
+
+        var editControls = document.createElement("span");
+        editControls.className = "stop-controls";
+        var saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.className = "btn btn-secondary btn-small";
+        saveBtn.textContent = "Save";
+        saveBtn.addEventListener("click", function () {
+          saveEditStop(index, editInput.value);
+        });
+        var cancelBtn = document.createElement("button");
+        cancelBtn.type = "button";
+        cancelBtn.className = "btn btn-secondary btn-small";
+        cancelBtn.textContent = "Cancel";
+        cancelBtn.addEventListener("click", cancelEditStop);
+        editControls.appendChild(saveBtn);
+        editControls.appendChild(cancelBtn);
+
+        li.appendChild(badge);
+        li.appendChild(editInput);
+        li.appendChild(editControls);
+        els.stopList.appendChild(li);
+
+        requestAnimationFrame(function () {
+          editInput.focus();
+          editInput.select();
+        });
+        return;
+      }
+
       var textWrap = document.createElement("span");
       textWrap.className = "stop-text";
 
@@ -359,6 +418,10 @@
       });
       downBtn.disabled = index === stops.length - 1;
 
+      var editBtn = makeIconButton("✏️", "Edit stop " + (index + 1), function () {
+        startEditStop(index);
+      });
+
       var pinLabel = stop.pin
         ? "Adjust pinned location for stop " + (index + 1)
         : "Pin exact location for stop " + (index + 1);
@@ -373,6 +436,7 @@
 
       controls.appendChild(upBtn);
       controls.appendChild(downBtn);
+      controls.appendChild(editBtn);
       controls.appendChild(pinBtn);
       controls.appendChild(removeBtn);
 
@@ -393,6 +457,31 @@
     btn.setAttribute("aria-label", ariaLabel);
     btn.addEventListener("click", onClick);
     return btn;
+  }
+
+  // ---------- editing a stop's name in place ----------
+
+  function startEditStop(index) {
+    if (cornerEditIndex >= 0) closeCornerPicker();
+    editingIndex = index;
+    renderStops();
+  }
+
+  function cancelEditStop() {
+    editingIndex = -1;
+    renderStops();
+  }
+
+  function saveEditStop(index, newText) {
+    var trimmed = (newText || "").trim();
+    if (!trimmed) {
+      setStatus("A stop can't be blank — type something or tap Cancel.", "error");
+      return;
+    }
+    stops[index].text = trimmed;
+    editingIndex = -1;
+    renderStops();
+    setStatus("Stop " + (index + 1) + " updated.", "success");
   }
 
   // ---------- stop list mutation ----------
@@ -427,6 +516,7 @@
 
   function removeStop(index) {
     if (cornerEditIndex >= 0) closeCornerPicker();
+    editingIndex = -1;
     stops.splice(index, 1);
     renderStops();
   }
@@ -435,6 +525,7 @@
     var newIndex = index + direction;
     if (newIndex < 0 || newIndex >= stops.length) return;
     if (cornerEditIndex >= 0) closeCornerPicker();
+    editingIndex = -1;
     var tmp = stops[index];
     stops[index] = stops[newIndex];
     stops[newIndex] = tmp;
@@ -446,6 +537,7 @@
     var ok = window.confirm("Remove all " + stops.length + " stops from this list? This does not delete any saved routes.");
     if (!ok) return;
     if (cornerEditIndex >= 0) closeCornerPicker();
+    editingIndex = -1;
     stops = [];
     renderStops();
     setStatus("Stop list cleared.", "success");
@@ -513,6 +605,7 @@
       if (!ok) return;
     }
     if (cornerEditIndex >= 0) closeCornerPicker();
+    editingIndex = -1;
     stops = routes[name].slice();
     els.routeNameInput.value = name;
     renderStops();
