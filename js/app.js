@@ -158,6 +158,15 @@
 
   var cornerMap = null;
   var lastKnownPoint = null; // fallback for "Use This Pin" if the map itself failed to render
+  var tileWatchdogTimer = null;
+  var anyTileLoadedForCurrentView = false;
+
+  function showMapTroubleMessage() {
+    setCornerStatus(
+      "The map isn't loading — likely a weak signal. \"Use My Current Location\" and typed coordinates below still work without it.",
+      "error"
+    );
+  }
 
   function setCornerStatus(message, type) {
     els.cornerStatus.textContent = message;
@@ -174,26 +183,19 @@
 
     // Individual tile failures are normal (a few at the map's edge). What
     // matters is: did ANY tile for the current view actually load? If a
-    // whole batch finishes with zero successes, that's a real signal —
-    // usually a dropped signal while driving — worth telling the driver
-    // about instead of leaving a silently blank map.
-    var tileSuccesses = 0;
-    var tileFailures = 0;
+    // whole batch finishes with zero successes, that's worth telling the
+    // driver about instead of leaving a silently blank map. This alone
+    // isn't enough, though — a dropped signal often makes a tile request
+    // hang rather than fail, so neither "load" nor "tileerror" ever fires.
+    // showPointOnMap() below backs this up with a flat timeout for exactly
+    // that case.
     tileLayer.on("tileload", function () {
-      tileSuccesses++;
-    });
-    tileLayer.on("tileerror", function () {
-      tileFailures++;
+      anyTileLoadedForCurrentView = true;
     });
     tileLayer.on("load", function () {
-      if (tileSuccesses === 0 && tileFailures > 0) {
-        setCornerStatus(
-          "The map isn't loading — likely a weak signal. \"Use My Current Location\" and typed coordinates below still work without it.",
-          "error"
-        );
+      if (!anyTileLoadedForCurrentView) {
+        showMapTroubleMessage();
       }
-      tileSuccesses = 0;
-      tileFailures = 0;
     });
 
     return cornerMap;
@@ -201,6 +203,9 @@
 
   function showPointOnMap(lat, lon) {
     lastKnownPoint = { lat: lat, lon: lon };
+    anyTileLoadedForCurrentView = false;
+    if (tileWatchdogTimer) clearTimeout(tileWatchdogTimer);
+
     try {
       // Unhide BEFORE touching Leaflet, so a first-ever map creation measures
       // its real size instead of 0x0. A hidden/just-shown container can still
@@ -217,6 +222,11 @@
           cornerMap.setView([lat, lon], 19);
         });
       });
+      tileWatchdogTimer = setTimeout(function () {
+        if (!anyTileLoadedForCurrentView) {
+          showMapTroubleMessage();
+        }
+      }, 6000);
       return true;
     } catch (e) {
       setCornerStatus(
@@ -259,6 +269,10 @@
   function closeCornerPicker() {
     cornerEditIndex = -1;
     lastKnownPoint = null;
+    if (tileWatchdogTimer) {
+      clearTimeout(tileWatchdogTimer);
+      tileWatchdogTimer = null;
+    }
     els.cornerPanel.hidden = true;
   }
 
@@ -307,7 +321,15 @@
 
   function geocodeQuery(query) {
     var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" + encodeURIComponent(query);
-    return fetch(url, { headers: { Accept: "application/json" } })
+    // A dropped-out mobile signal often HANGS a request rather than failing
+    // it outright, which with no timeout leaves "Looking up…" stuck forever
+    // and no error ever shown. Force it to fail after 10s so that can't happen.
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () {
+      controller.abort();
+    }, 10000);
+
+    return fetch(url, { headers: { Accept: "application/json" }, signal: controller.signal })
       .then(function (res) {
         if (!res.ok) throw new Error("Lookup failed. Try again in a moment.");
         return res.json();
@@ -317,6 +339,15 @@
           throw new Error("No location found for that search. Try adding the city, or use manual coordinates below.");
         }
         return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon), name: results[0].display_name };
+      })
+      .catch(function (err) {
+        if (err.name === "AbortError") {
+          throw new Error("The search timed out — likely a weak signal. Try again, or use manual coordinates below.");
+        }
+        throw err;
+      })
+      .finally(function () {
+        clearTimeout(timeoutId);
       });
   }
 

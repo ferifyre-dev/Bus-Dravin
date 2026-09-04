@@ -188,6 +188,12 @@ staying silently blank, and **Use My Current Location** and typed
 coordinates keep working even when the map picture itself can't load
 — you can still confirm a pin without ever seeing the map.
 
+On a genuinely dropped connection, a search or the map can sit stuck
+rather than fail outright. Bus Dravin gives a search up to 10 seconds
+and the map tiles up to 6, then shows the same clear message instead
+of leaving you staring at "Looking up…" or a blank box with no
+explanation.
+
 ---
 
 ## Notes

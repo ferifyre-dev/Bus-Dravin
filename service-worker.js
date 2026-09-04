@@ -4,7 +4,7 @@
 // fetch handler is network-first, so an update is picked up on the very
 // next reload whenever the phone is online, with the cache only used when
 // truly offline.
-var CACHE_NAME = "bus-dravin-v8";
+var CACHE_NAME = "bus-dravin-v9";
 var APP_SHELL = [
   "./",
   "./index.html",
