@@ -180,6 +180,14 @@ any time — or tap **Remove Pin** to go back to using the address.
 > doesn't match what the map actually shows you. Dragging a pin on a
 > real map sidesteps both problems.
 
+**If the map ever looks blank when you tap 📍** — no tiles, just a
+grey box — that's almost always a weak cell signal, since map tiles
+have to download live and cell towers drop out constantly while
+driving. Bus Dravin now tells you when that's happening instead of
+staying silently blank, and **Use My Current Location** and typed
+coordinates keep working even when the map picture itself can't load
+— you can still confirm a pin without ever seeing the map.
+
 ---
 
 ## Notes

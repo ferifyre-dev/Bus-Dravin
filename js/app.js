@@ -157,6 +157,7 @@
   // underneath it, so there's no marker to drag and nothing to misjudge.
 
   var cornerMap = null;
+  var lastKnownPoint = null; // fallback for "Use This Pin" if the map itself failed to render
 
   function setCornerStatus(message, type) {
     els.cornerStatus.textContent = message;
@@ -166,30 +167,64 @@
   function ensureCornerMap() {
     if (cornerMap) return cornerMap;
     cornerMap = L.map("corner-map");
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    var tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(cornerMap);
+
+    // Individual tile failures are normal (a few at the map's edge). What
+    // matters is: did ANY tile for the current view actually load? If a
+    // whole batch finishes with zero successes, that's a real signal —
+    // usually a dropped signal while driving — worth telling the driver
+    // about instead of leaving a silently blank map.
+    var tileSuccesses = 0;
+    var tileFailures = 0;
+    tileLayer.on("tileload", function () {
+      tileSuccesses++;
+    });
+    tileLayer.on("tileerror", function () {
+      tileFailures++;
+    });
+    tileLayer.on("load", function () {
+      if (tileSuccesses === 0 && tileFailures > 0) {
+        setCornerStatus(
+          "The map isn't loading — likely a weak signal. \"Use My Current Location\" and typed coordinates below still work without it.",
+          "error"
+        );
+      }
+      tileSuccesses = 0;
+      tileFailures = 0;
+    });
+
     return cornerMap;
   }
 
   function showPointOnMap(lat, lon) {
-    // Unhide BEFORE touching Leaflet, so a first-ever map creation measures
-    // its real size instead of 0x0. A hidden/just-shown container can still
-    // be mid-layout for a frame or two (especially with the panel's own
-    // scroll-into-view animation running), so a flat setTimeout guess isn't
-    // reliable — wait for an actual paint via requestAnimationFrame instead,
-    // which is what was intermittently leaving the map tiles blank.
-    els.cornerMapWrap.hidden = false;
-    ensureCornerMap();
-    cornerMap.invalidateSize();
-    cornerMap.setView([lat, lon], 19);
-    requestAnimationFrame(function () {
+    lastKnownPoint = { lat: lat, lon: lon };
+    try {
+      // Unhide BEFORE touching Leaflet, so a first-ever map creation measures
+      // its real size instead of 0x0. A hidden/just-shown container can still
+      // be mid-layout for a frame or two (especially with the panel's own
+      // scroll-into-view animation running), so a flat setTimeout guess isn't
+      // reliable — wait for an actual paint via requestAnimationFrame instead.
+      els.cornerMapWrap.hidden = false;
+      ensureCornerMap();
+      cornerMap.invalidateSize();
+      cornerMap.setView([lat, lon], 19);
       requestAnimationFrame(function () {
-        cornerMap.invalidateSize();
-        cornerMap.setView([lat, lon], 19);
+        requestAnimationFrame(function () {
+          cornerMap.invalidateSize();
+          cornerMap.setView([lat, lon], 19);
+        });
       });
-    });
+      return true;
+    } catch (e) {
+      setCornerStatus(
+        "The map couldn't load. \"Use My Current Location\" and typed coordinates below still work without it — tap Use This Pin.",
+        "error"
+      );
+      return false;
+    }
   }
 
   function openCornerPicker(index) {
@@ -210,8 +245,10 @@
     if (stop.pin) {
       els.cornerSearchInput.value = "";
       var parts = stop.pin.split(",");
-      showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
-      setCornerStatus("Showing this stop's pinned location — pan the map to adjust, or search below to start over.", null);
+      var ok = showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
+      if (ok) {
+        setCornerStatus("Showing this stop's pinned location — pan the map to adjust, or search below to start over.", null);
+      }
     } else {
       var defaultCity = els.defaultCityInput.value.trim();
       els.cornerSearchInput.value = formatStopForMaps(stop.text, defaultCity);
@@ -221,6 +258,7 @@
 
   function closeCornerPicker() {
     cornerEditIndex = -1;
+    lastKnownPoint = null;
     els.cornerPanel.hidden = true;
   }
 
@@ -254,8 +292,10 @@
     navigator.geolocation.getCurrentPosition(
       function (pos) {
         els.useMyLocationBtn.disabled = false;
-        showPointOnMap(pos.coords.latitude, pos.coords.longitude);
-        setCornerStatus("Found your location — pan the map if it's not exactly right, then tap Use This Pin.", null);
+        var ok = showPointOnMap(pos.coords.latitude, pos.coords.longitude);
+        if (ok) {
+          setCornerStatus("Found your location — pan the map if it's not exactly right, then tap Use This Pin.", null);
+        }
       },
       function (err) {
         els.useMyLocationBtn.disabled = false;
@@ -290,8 +330,10 @@
     els.cornerSearchBtn.disabled = true;
     geocodeQuery(query)
       .then(function (result) {
-        showPointOnMap(result.lat, result.lon);
-        setCornerStatus("Found: " + result.name + " — pan the map so the pin lands on the exact corner, then tap Use This Pin.", null);
+        var ok = showPointOnMap(result.lat, result.lon);
+        if (ok) {
+          setCornerStatus("Found: " + result.name + " — pan the map so the pin lands on the exact corner, then tap Use This Pin.", null);
+        }
       })
       .catch(function (err) {
         setCornerStatus(err.message || "Couldn't reach the lookup service. Try manual coordinates below.", "error");
@@ -308,14 +350,23 @@
       return;
     }
     var parts = text.split(",");
-    showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
-    setCornerStatus("Pan the map if needed, then tap Use This Pin.", null);
+    var ok = showPointOnMap(parseFloat(parts[0]), parseFloat(parts[1]));
+    if (ok) {
+      setCornerStatus("Pan the map if needed, then tap Use This Pin.", null);
+    }
   }
 
   function confirmCornerPin() {
-    if (!cornerMap) return;
-    var center = cornerMap.getCenter();
-    applyCornerResult(center.lat, center.lng);
+    if (cornerMap) {
+      var center = cornerMap.getCenter();
+      applyCornerResult(center.lat, center.lng);
+      return;
+    }
+    // Map failed to render for some reason — still honor the point that was
+    // searched / found via GPS / typed in, rather than leaving the button dead.
+    if (lastKnownPoint) {
+      applyCornerResult(lastKnownPoint.lat, lastKnownPoint.lon);
+    }
   }
 
   // ---------- stop list rendering ----------

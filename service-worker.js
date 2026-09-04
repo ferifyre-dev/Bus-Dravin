@@ -4,7 +4,7 @@
 // fetch handler is network-first, so an update is picked up on the very
 // next reload whenever the phone is online, with the cache only used when
 // truly offline.
-var CACHE_NAME = "bus-dravin-v7";
+var CACHE_NAME = "bus-dravin-v8";
 var APP_SHELL = [
   "./",
   "./index.html",
@@ -13,6 +13,13 @@ var APP_SHELL = [
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./vendor/leaflet/leaflet.js",
+  "./vendor/leaflet/leaflet.css",
+  "./vendor/leaflet/images/marker-icon.png",
+  "./vendor/leaflet/images/marker-icon-2x.png",
+  "./vendor/leaflet/images/marker-shadow.png",
+  "./vendor/leaflet/images/layers.png",
+  "./vendor/leaflet/images/layers-2x.png",
 ];
 
 self.addEventListener("install", function (event) {
@@ -44,7 +51,7 @@ self.addEventListener("activate", function (event) {
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
   var url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return; // never touch Google Maps / Leaflet / Nominatim requests
+  if (url.origin !== self.location.origin) return; // never touch Google Maps, Nominatim, or OSM map tile requests
 
   event.respondWith(
     fetch(event.request)
